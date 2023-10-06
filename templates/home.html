@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Home</title>
+</head>
+<body>
+    <div>
+        {% if form %}
+        <form method="POST">
+            {{ form.hidden_tag() }}
+            <table>
+                <tr>
+                    <td>{{ form.street_address.label }}</td>
+                    <td>{{ form.street_address }}</td>
+                </tr>
+                <tr>
+                    <td>{{ form.city.label }}</td>
+                    <td>{{ form.city }}</td>
+                </tr>
+                <tr>
+                    <td>{{ form.state.label }}</td>
+                    <td>{{ form.state }}</td>
+                </tr>
+                <tr>
+                    <td>{{ form.zip.label }}</td>
+                    <td>{{ form.zip }}</td>
+                </tr>
+                <tr>
+                    <td></td>
+                    <td>{{ form.submit }}</td>
+                </tr>
+            </table>
+        </form>
+        {% endif %}
+    </div>
+    <div>
+        {% if errors %}
+        Total mW per Minute: {{ errors }}
+        {% endif %}
+    </div>
+    <div>
+        {% if shape %}
+            <table>
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Address</th>
+                        <th>Coordinates</th>
+                        <th>Wattage</th>
+                        <th>Time (Hours)</th>
+                        <th>mW per Minute</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for id, data in shape.items() %}
+                    <tr>
+                        <td>{{ id }}</td>
+                        <td>{{ data.address }}</td>
+                        <td>{{ data.coordinates }}</td>
+                        <td>{{ data.wattage }}</td>
+                        <td>{{ data.time }}</td>
+                        <td>{{ data.mwm }}</td>
+                    </tr>
+                    {% endfor %}
+            </tbody>
+            </table>
+        {% endif %}
+    </div>
+</body>
+</html>

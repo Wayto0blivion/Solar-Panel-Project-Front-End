@@ -1,0 +1,33 @@
+Goal:
+Determine the best location for a new solar panel recycling facility in Florida based on driving distance between
+the location in Atlanta and the Litton.
+
+Data:
+Location of Atlanta Facility: 111 Fredrix Alley NE, Lawrenceville, GA 30046
+        Lat, Lon = 33.97189936097202, -83.97788941494869
+Spreadsheet with info of solar panel facilities across the US.
+
+Scope:
+Setup MySQL database for import from spreadsheet.
+Manipulate data to show best location for weighted distance from closest facilities within a certain distance of Florida.
+
+Shortest drive per kW
+
+Google Maps Time between Litton and Atlanta:
+4 Hrs 8 mins
+Half of that: 2 hours (rounded)
+
+
+Distance from Atlanta Facility to southernmost Solar Facility:
+723 miles
+10 hr 48 min
+
+Half of that time, rounded:
+    5.5 hrs
+
+openrouteservice API key:
+5b3ce3597851110001cf624819743d9af4454a189cb1389e6f22df78
+
+
+Best Location for Weighted Atlanta with only highest of AC and DC:
+[ 27.6 -82.3]
