@@ -925,9 +925,9 @@ def get_custom_weights():
 
         errors += str(score)
 
-        return render_template('home.html', form=form, errors=errors, shape=shape)
+        return render_template('Cleanup (old html files)/home.html', form=form, errors=errors, shape=shape)
 
-    return render_template('home.html', form=form, errors=errors, shape=shape)
+    return render_template('Cleanup (old html files)/home.html', form=form, errors=errors, shape=shape)
 
 
 def travel_time(start, end):

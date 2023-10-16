@@ -53,8 +53,9 @@ class Solar_List(db.Model):
     column3 = db.Column('Column3', db.String(50))
     column50 = db.Column('Column50', db.String(50))
     id = db.Column('id', db.Integer, primary_key=True)
-    wattage_id = db.relationship('Solar_Wattage')
-    florida_id = db.relationship('Florida_Facility')
+    # wattage_id = db.relationship('Solar_Wattage')
+    # florida_id = db.relationship('Florida_Facility')
+    texas_id = db.relationship('Texas_Facility')
 
 
 class Solar_Wattage(db.Model):
@@ -81,4 +82,16 @@ class Florida_Facility(db.Model):
     score = db.Column('score', db.Float())
     mW_per_minute = db.Column('mW_per_minute', db.Float())
 
+
+class Texas_Facility(db.Model):
+    __tablename__ = 'Texas_Facility'
+    id = db.Column('id', db.Integer, db.ForeignKey('solar_facility_list.id'), primary_key=True)
+    closest_facility = db.Column('closest_facility', db.String(100))
+    highest_wattage = db.Column('highest_wattage', db.Float())
+    latitude = db.Column('latitude', db.Float())
+    longitude = db.Column('longitude', db.Float())
+    street_address = db.Column('street_address', db.String(200))
+    time_to_facility = db.Column('time_to_facility(hours)', db.Float())
+    score = db.Column('score', db.Float())
+    mW_per_minute = db.Column('mW_per_minute', db.Float())
 

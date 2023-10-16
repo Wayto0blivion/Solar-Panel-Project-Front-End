@@ -50,7 +50,7 @@ def atlanta_home():
 
     # get_tech()
 
-    return render_template('home.html')
+    return render_template('Cleanup (old html files)/home.html')
 
 
 def get_state():

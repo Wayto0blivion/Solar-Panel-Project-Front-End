@@ -18,9 +18,11 @@ def create_app():
 
     from views import views
     from atlantaviews import atlantaviews
+    from texasviews import texasviews
 
     app.register_blueprint(views, url_prefix='/')
     app.register_blueprint(atlantaviews, url_prefix='/atlanta')
+    app.register_blueprint(texasviews, url_prefix='/texas')
 
     return app
 
