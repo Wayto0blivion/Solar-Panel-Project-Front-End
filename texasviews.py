@@ -15,16 +15,17 @@ texasviews = Blueprint('texasviews', __name__)
 ors_API_key = '5b3ce3597851110001cf624819743d9af4454a189cb1389e6f22df78'
 base_url = 'http://192.168.3.104:8080/ors'
 ors_client = client.Client(key=ors_API_key, base_url=base_url)
-texas_map_location = [31.96, 99.9]
+texas_map_location = [99.9, 31.96]
 
-m = folium.Map(location=texas_map_location, zoom_start=9)
+# m = folium.Map(location=texas_map_location, zoom_start=9)
 
 max_threads = 10
 thread_pool = concurrent.futures.ThreadPoolExecutor(max_threads)
 
 # texas_polygon = Polygon([(25, -104), (25, -94), (37, -94), (37, -104)])
-texas_polygon_corrected = Polygon([(25, -104), (37, -104), (37, -94), (25, -94)])
+# texas_polygon_corrected = Polygon([(25, -104), (37, -104), (37, -94), (25, -94)])
 
+Best_Location = [31.7, -102.7]
 
 
 @texasviews.route('/', methods=['GET', 'POST'])
@@ -97,9 +98,9 @@ def determine_location():
         facilities.append([item.latitude, item.longitude, item.highest_wattage])
 
     for location in grid:
-        if not is_within_rectangle(location):
-            print(location, "Not in Texas")
-            continue
+        # if not is_within_rectangle(location):
+        #     print(location, "Not in Texas")
+        #     continue
         try:
             print("Current Location:", location)
             score = calculate_score(location, facilities)
@@ -116,6 +117,8 @@ def determine_location():
 
     print('Best Location:', best_location)
 
+    m = folium.Map(location=texas_map_location, zoom_start=9)
+
     folium.Marker(location=best_location,).add_to(m)
 
     m.save('/determine-location-texas.html')
@@ -130,8 +133,9 @@ def calculate_score(location, facilities):
         if travel_time == np.inf:
             continue
 
-        if travel_time < 15:
+        if travel_time > 15:
             print("Travel time is", travel_time)
+            return -np.inf
         else:
             print("Too High! Travel time is", travel_time)
 
@@ -143,7 +147,7 @@ def calculate_score(location, facilities):
         print("Highest Travel Time:", highest_travel_time)
     # else:
         # print("No Time Determined!")
-    print("Score", score)
+    # print("Score", score)
     return score
 
 
@@ -152,14 +156,15 @@ def calculate_travel_time(start, end):
     routes = None
     try:
         routes = ors_client.directions(coordinates=coords, profile='driving-car')
+        return routes['routes'][0]['summary']['duration'] / 3600
     except Exception as e:
         if routes:
             print(routes)
         print("No route found", e)
         return np.inf
 
-    print(routes['routes'][0]['summary']['duration'] / 3600)
-    return routes['routes'][0]['summary']['duration'] / 3600
+    # print(routes['routes'][0]['summary']['duration'] / 3600)
+
 
 
 # async def calculate_travel_time(start, end):
@@ -186,4 +191,37 @@ def is_within_rectangle(coord):
     min_lat, min_lon, max_lat, max_lon = texas_polygon_corrected.bounds
     lat, lon = coord
     return min_lat <= lat <= max_lat and min_lon <= lon <= max_lon
+
+
+@texasviews.route('/show-location')
+def show_location():
+    m = folium.Map(location=Best_Location, zoom_start=7)
+
+    folium.Marker(location=Best_Location).add_to(m)
+
+    m.save('./determine-location-texas.html')
+
+    return 'Location Map Generated!'
+
+
+@texasviews.route('/show-facility-locations')
+def show_all_locations():
+    m = folium.Map(location=Best_Location, zoom_start=7)
+
+    nearby = Texas_Facility.query.all()
+    facilities = []
+
+    for item in nearby:
+        facilities.append([item.latitude, item.longitude, item.highest_wattage])
+
+    for facility in facilities:
+        folium.Marker(location=[facility[0], facility[1]],
+                      popup=f"{facility[2]}",
+                      icon=folium.Icon(icon='cloud', color='green')
+                      ).add_to(m)
+
+    m.save('./all-texas-facilities.html')
+
+    return "Facility Map Generated!"
+
 
