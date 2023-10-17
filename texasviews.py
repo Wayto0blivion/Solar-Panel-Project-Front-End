@@ -8,6 +8,7 @@ import asyncio
 import aiohttp
 import concurrent.futures
 from shapely.geometry import Point, Polygon
+from multiprocessing import Pool
 
 
 texasviews = Blueprint('texasviews', __name__)
@@ -17,27 +18,18 @@ base_url = 'http://192.168.3.104:8080/ors'
 ors_client = client.Client(key=ors_API_key, base_url=base_url)
 texas_map_location = [99.9, 31.96]
 
-# m = folium.Map(location=texas_map_location, zoom_start=9)
-
-max_threads = 10
-thread_pool = concurrent.futures.ThreadPoolExecutor(max_threads)
-
-# texas_polygon = Polygon([(25, -104), (25, -94), (37, -94), (37, -104)])
-# texas_polygon_corrected = Polygon([(25, -104), (37, -104), (37, -94), (25, -94)])
-
+# This is for reference to compare the async version to.
 Best_Location = [31.7, -102.7]
-
+Waco_Location = [31.56, -97.18]
 
 @texasviews.route('/', methods=['GET', 'POST'])
 def texas_home():
 
-    # texas_facility_stats()
+    # determine_location()
 
-    # loop = asyncio.new_event_loop()
-    # asyncio.set_event_loop(loop)
-    # loop.run_until_complete(determine_location())
+    add_to_database()
 
-    determine_location()
+    add_waco_stats()
 
     return render_template('home.html')
 
@@ -86,6 +78,41 @@ def texas_facility_stats():
         db.session.commit()
 
 
+# def determine_location():
+#     nearby = Texas_Facility.query.all()
+#     facilities = []
+#     grid = np.mgrid[26:36:0.1, -106:-93:0.1].reshape(2, -1).T
+#     best_score = -np.inf
+#     best_location = None
+#     longest_travel = 0
+#
+#     for item in nearby:
+#         facilities.append([item.latitude, item.longitude, item.highest_wattage])
+#
+#     for location in grid:
+#         try:
+#             print("Current Location:", location)
+#             score = calculate_score(location, facilities)
+#             if score > best_score:
+#                 best_score = score
+#                 best_location = location
+#         except Exception as e:
+#             print('Exception! in grid loop!', location, e)
+#             continue
+#
+#     if best_location is None:
+#         print("Best Location is None!")
+#         return
+#
+#     print('Best Location:', best_location)
+#
+#     m = folium.Map(location=texas_map_location, zoom_start=9)
+#
+#     folium.Marker(location=best_location,).add_to(m)
+#
+#     m.save('/determine-location-texas.html')
+
+
 def determine_location():
     nearby = Texas_Facility.query.all()
     facilities = []
@@ -97,19 +124,15 @@ def determine_location():
     for item in nearby:
         facilities.append([item.latitude, item.longitude, item.highest_wattage])
 
-    for location in grid:
-        # if not is_within_rectangle(location):
-        #     print(location, "Not in Texas")
-        #     continue
-        try:
-            print("Current Location:", location)
-            score = calculate_score(location, facilities)
-            if score > best_score:
-                best_score = score
-                best_location = location
-        except Exception as e:
-            print('Exception! in grid loop!', location, e)
-            continue
+    locations_with_facilities = [(location, facilities) for location in grid]
+
+    with Pool(processes=6) as pool:
+        results = pool.map(calculate_score_for_location, locations_with_facilities)
+
+    for location, score in results:
+        if score is not None and score > best_score:
+            best_score = score
+            best_location = location
 
     if best_location is None:
         print("Best Location is None!")
@@ -134,10 +157,10 @@ def calculate_score(location, facilities):
             continue
 
         if travel_time > 15:
-            print("Travel time is", travel_time)
+            # print("Travel time is", travel_time)
             return -np.inf
-        else:
-            print("Too High! Travel time is", travel_time)
+        # else:
+            # print("Too High! Travel time is", travel_time)
 
         score += facility[2] / travel_time
         if travel_time > highest_travel_time:
@@ -145,9 +168,6 @@ def calculate_score(location, facilities):
 
     if highest_travel_time > 0:
         print("Highest Travel Time:", highest_travel_time)
-    # else:
-        # print("No Time Determined!")
-    # print("Score", score)
     return score
 
 
@@ -162,35 +182,6 @@ def calculate_travel_time(start, end):
             print(routes)
         print("No route found", e)
         return np.inf
-
-    # print(routes['routes'][0]['summary']['duration'] / 3600)
-
-
-
-# async def calculate_travel_time(start, end):
-#     loop = asyncio.get_event_loop()
-#     coords = ((start[1], start[0], end[1], end[0]))
-#     routes = None  # Initialize routes here
-#     try:
-#         # Use run_in_executor with the custom thread_pool
-#         routes = await loop.run_in_executor(thread_pool, ors_client.directions, coordinates=coords, profile='driving-car')
-#         return routes['routes'][0]['summary']['duration'] / 3600
-#     except Exception as e:
-#         if routes:  # Now, this won't raise an error even if the assignment in the try block fails
-#             print(routes)
-#         print("No route found")
-#         return np.inf
-
-
-# def is_within_texas(coord):
-#     point = Point(coord[1], coord[0])  # Note the order: Point takes (longitude, latitude)
-#     return texas_polygon.contains(point)
-
-
-def is_within_rectangle(coord):
-    min_lat, min_lon, max_lat, max_lon = texas_polygon_corrected.bounds
-    lat, lon = coord
-    return min_lat <= lat <= max_lat and min_lon <= lon <= max_lon
 
 
 @texasviews.route('/show-location')
@@ -225,3 +216,63 @@ def show_all_locations():
     return "Facility Map Generated!"
 
 
+def calculate_score_for_location(args):
+    location, facilities = args
+    try:
+        score = calculate_score(location, facilities)
+        return (location, score)
+    except Exception as e:
+        print(f"Exception calculating score for location {location}: {e}")
+        return (location, None)
+
+
+def add_to_database():
+    facilities = []
+    nearby = Texas_Facility.query.all()
+
+    for item in nearby:
+        facilities.append([item.latitude, item.longitude, item.highest_wattage])
+
+    for item in nearby:
+        try:
+            time = calculate_travel_time((item.latitude, item.longitude), Best_Location)
+            if time != float('inf'):
+                item.time_to_facility = time
+                mw_per_min = item.highest_wattage / (time * 60)
+                item.mW_per_minute = mw_per_min
+            else:
+                print(f"Skipping update for {item.id} due to infinite travel time")
+                continue
+            score = calculate_score(Best_Location, facilities)
+            item.score = score
+            db.session.commit()
+
+        except Exception as e:
+            db.session.rollback()
+            print(f"Error! Location: {item.id} --- {str(e)}")
+
+
+def add_waco_stats():
+    facilities = []
+    nearby = Texas_Facility.query.all()
+
+    for item in nearby:
+        facilities.append([item.latitude, item.longitude, item.highest_wattage])
+
+    for item in nearby:
+        try:
+            time = calculate_travel_time((item.latitude, item.longitude), Waco_Location)
+            if time != float('inf'):
+                item.waco_ttf = time
+                mw_per_min = item.highest_wattage / (time * 60)
+                item.waco_mw_per_min = mw_per_min
+            else:
+                print(f"Skipping update for {item.id} due to infinite travel time")
+                continue
+            score = calculate_score(Waco_Location, facilities)
+            item.waco_score = score
+            db.session.commit()
+
+        except Exception as e:
+            db.session.rollback()
+            print(f"Error! Location: {item.id} --- {str(e)}")

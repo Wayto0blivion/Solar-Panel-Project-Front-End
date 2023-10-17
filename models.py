@@ -94,4 +94,7 @@ class Texas_Facility(db.Model):
     time_to_facility = db.Column('time_to_facility(hours)', db.Float())
     score = db.Column('score', db.Float())
     mW_per_minute = db.Column('mW_per_minute', db.Float())
+    waco_ttf = db.Column('waco_ttf', db.Float())
+    waco_mw_per_min = db.Column('waco_mw_per_min', db.Float())
+    waco_score = db.Column('waco_score', db.Float())
 
