@@ -1,5 +1,6 @@
 from __init__ import db
 
+
 class Solar_List(db.Model):
     __tablename__ = 'solar_facility_list'
     plant_name = db.Column('plant name', db.String(50))
@@ -86,7 +87,6 @@ class Florida_Facility(db.Model):
 class Texas_Facility(db.Model):
     __tablename__ = 'Texas_Facility'
     id = db.Column('id', db.Integer, db.ForeignKey('solar_facility_list.id'), primary_key=True)
-    closest_facility = db.Column('closest_facility', db.String(100))
     highest_wattage = db.Column('highest_wattage', db.Float())
     latitude = db.Column('latitude', db.Float())
     longitude = db.Column('longitude', db.Float())
@@ -94,7 +94,59 @@ class Texas_Facility(db.Model):
     time_to_facility = db.Column('time_to_facility(hours)', db.Float())
     score = db.Column('score', db.Float())
     mW_per_minute = db.Column('mW_per_minute', db.Float())
-    waco_ttf = db.Column('waco_ttf', db.Float())
-    waco_mw_per_min = db.Column('waco_mw_per_min', db.Float())
-    waco_score = db.Column('waco_score', db.Float())
+
+
+class Solar2024(db.Model):
+    __tablename__ = 'solar_jan_2024'
+    plant_name = db.Column('plant name', db.String(50))
+    status_simple = db.Column('status simple', db.String(50))
+    status_detail = db.Column('status detail', db.String(256))
+    operating_month = db.Column('operating month', db.Integer)
+    operating_year = db.Column('operating year', db.Integer)
+    expected_online_month = db.Column('expected online month (current)', db.Integer)
+    expected_online_year = db.Column('expected online year (current)', db.Integer)
+    expected_online_month_original = db.Column('expected online month (original)', db.Integer)
+    expected_online_year_original = db.Column('expected online year (original)', db.Integer)
+    ac_capacity = db.Column('ac nameplate capacity MW', db.Integer)
+    dc_capacity = db.Column('dc nameplate capacity MW', db.Float(precision='double'))
+    storage_capacity = db.Column('storage energy capacity MWh', db.Float(precision='double'))
+    street_address = db.Column('street address', db.String(50))
+    city = db.Column('city', db.String(50))
+    state = db.Column('state', db.String(50))
+    zip = db.Column('zip', db.Integer)
+    county = db.Column('county', db.String(50))
+    congressional_district = db.Column('congressional district', db.String(50))
+    upper_desc = db.Column('upper description', db.String(50))
+    upper_district = db.Column('upper district', db.String(50))
+    lower_desc = db.Column('lower description', db.String(50))
+    lower_district = db.Column('lower district', db.String(50))
+    latitude = db.Column('latitude', db.Float(precision='double'))
+    longitude = db.Column('longitude', db.Float(precision='double'))
+    google_map = db.Column('Google Map', db.String(50))
+    bing_map = db.Column('Bing Map', db.String(50))
+    technology = db.Column('technology', db.String(50))
+    module_technology = db.Column('module technology', db.String(50))
+    csp_technology = db.Column('csp technology', db.String(50))
+    tracker_type = db.Column('tracker type', db.String(50))
+    azimuth_angle = db.Column('azimuth angle', db.Integer)
+    tilt_angle = db.Column('tilt angle', db.Integer)
+    net_metering_agreement = db.Column('net metering agreement', db.String(50))
+    virtual_net = db.Column('virtual net metering agreement', db.String(50))
+    ferc_qf = db.Column('FERC QF', db.String(50))
+    sector_name = db.Column('sector name', db.String(50))
+    balancing_authority_code = db.Column('balancing authority code', db.String(50))
+    utility_name = db.Column('utility name', db.String(100))
+    entity_type = db.Column('entity type', db.String(50))
+    owner_name = db.Column('owner name', db.String(50))
+    system_owner = db.Column('transmission or distribution system owner', db.String(50))
+    grid_voltage_1 = db.Column('grid voltage kV', db.Integer)
+    grid_voltage_2 = db.Column('grid 2 voltage kV', db.Float(precision='double'))
+    grid_voltage_3 = db.Column('grid 3 voltage kV', db.String(50))
+    first_month = db.Column('first reported month', db.String(50))
+    first_year = db.Column('first reported year', db.String(50))
+    column1 = db.Column('Column1', db.Integer)
+    column2 = db.Column('Column2', db.Integer)
+    column3 = db.Column('Column3', db.String(50))
+    column50 = db.Column('Column50', db.String(50))
+    id = db.Column('id', db.Integer, primary_key=True)
 

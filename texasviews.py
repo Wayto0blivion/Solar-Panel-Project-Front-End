@@ -1,6 +1,7 @@
 from __init__ import db
 from flask import Flask, Blueprint, render_template
 import folium
+from forms import WeightForm
 from models import Solar_List, Texas_Facility
 import numpy as np
 from openrouteservice import client
@@ -19,8 +20,10 @@ ors_client = client.Client(key=ors_API_key, base_url=base_url)
 texas_map_location = [99.9, 31.96]
 
 # This is for reference to compare the async version to.
-Best_Location = [31.7, -102.7]
+# Best_Location = [31.7, -102.7]
+Best_Location = [31.6, -97.1]
 Waco_Location = [31.56, -97.18]
+
 
 @texasviews.route('/', methods=['GET', 'POST'])
 def texas_home():
@@ -29,7 +32,7 @@ def texas_home():
 
     add_to_database()
 
-    add_waco_stats()
+    # add_waco_stats()
 
     return render_template('home.html')
 
@@ -162,7 +165,7 @@ def calculate_score(location, facilities):
         # else:
             # print("Too High! Travel time is", travel_time)
 
-        score += facility[2] / travel_time
+        score += facility[2] / max(1, travel_time)
         if travel_time > highest_travel_time:
             highest_travel_time = travel_time
 
@@ -243,7 +246,7 @@ def add_to_database():
             else:
                 print(f"Skipping update for {item.id} due to infinite travel time")
                 continue
-            score = calculate_score(Best_Location, facilities)
+            score = item.highest_wattage / max(1, time)
             item.score = score
             db.session.commit()
 
@@ -276,3 +279,41 @@ def add_waco_stats():
         except Exception as e:
             db.session.rollback()
             print(f"Error! Location: {item.id} --- {str(e)}")
+
+
+@texasviews.route('/wattage-check', methods=['GET', 'POST'])
+def wattage_check():
+    # Breckenridge Coords: 32.67201121563078, -98.90485265767191
+    # Breckenridge Total Wattage: 11085.099999999999
+    # San Angelo Coords: 31.420472029874507, -100.42293480320487
+    # San Angelo Total Wattage: 15179.3
+
+    coords = [31.420472029874507, -100.42293480320487]
+    facilities = Texas_Facility.query.all()
+    # for facility in facilities:
+    #     print("Current Facility:", facility.id)
+    #     time = calculate_travel_time((facility.latitude, facility.longitude), coords)
+    #     if time <= 4:
+    #         wattage += facility.highest_wattage
+    #         print("Current Wattage:", wattage)
+    # print("Total Wattage:", wattage)
+
+    args = [(facility, coords) for facility in facilities]
+
+    with Pool(processes=8) as pool:
+        wattages = pool.starmap(calculate_wattage_for_facility, args)
+
+    total_wattage = sum(wattages)
+    print("Total Wattage:", total_wattage)
+
+
+    return render_template('home.html')
+
+
+def calculate_wattage_for_facility(facility, target_coords):
+    print("Current Facility:", facility.id)
+    time = calculate_travel_time((facility.latitude, facility.longitude), target_coords)
+    if time <= 4:
+        print("Facility Wattage:", facility.highest_wattage)
+        return facility.highest_wattage
+    return 0

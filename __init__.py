@@ -19,10 +19,12 @@ def create_app():
     from views import views
     from atlantaviews import atlantaviews
     from texasviews import texasviews
+    from uberviews import uberviews
 
-    app.register_blueprint(views, url_prefix='/')
+    app.register_blueprint(views, url_prefix='/views')
     app.register_blueprint(atlantaviews, url_prefix='/atlanta')
     app.register_blueprint(texasviews, url_prefix='/texas')
+    app.register_blueprint(uberviews, url_prefix='/')
 
     return app
 
