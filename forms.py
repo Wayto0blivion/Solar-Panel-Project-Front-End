@@ -14,3 +14,24 @@ class WeightForm(FlaskForm):
 class ImportForm(FlaskForm):
     file = FileField('CSV', validators=[DataRequired()])
     submit = SubmitField('Import', validators=[Optional()])
+
+
+class SearchForm(FlaskForm):
+    """
+    Designed to allow a user to select a state or group of states they would like to determine the best location for.
+    Allows the user to select a state to find a new location in, and a single or group of states
+    to use the solar facilities for.
+    If no states_search is provided, it will default to only the state the user is looking for.
+    """
+    new_facility_state_code = StringField('New Facility State Code', validators=[DataRequired()])
+    states_search = StringField('States Search')
+    # TODO: Include maximum travel time IntegerField that the user can adjust.
+    # TODO: Add required email field where user can be emailed the results.
+    # TODO: Add Checkbox so user can exclude results that havent begun construction (Under Development)
+    # TODO: Add Slider that allows user to adjust map precision for results.
+    submit = SubmitField('Search')
+
+
+
+
+

@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Home</title>
+</head>
+<body>
+<div>
+    <form method="POST" enctype="multipart/form-data">
+        {{ form.csrf_token }}
+        {{ form.hidden_tag() }}
+        {{ form.new_facility_state_code.label }}
+        {{ form.new_facility_state_code }}
+        {{ form.states_search.label }}
+        {{ form.states_search }}
+        {{ form.submit }}
+    </form>
+</div>
+</body>
+</html>
