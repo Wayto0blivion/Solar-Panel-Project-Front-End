@@ -1,3 +1,9 @@
+"""
+Created: 09-23-24
+Creator: Dustin
+"""
+
+
 from __init__ import db, ors_client, solarEngine
 import datetime
 from flask import Flask, Blueprint, render_template, flash, redirect, url_for
@@ -136,9 +142,35 @@ def state_search():
                 raise ValueError('No most recently uploaded datetime found.')
             filters.append(Solar_List.uploaded_datetime == most_recent_datetime)
 
+            # Create an empty pandas Dataframe to store data that will later be exported to an Excel spreadsheet.
+            data = pd.DataFrame(columns=['id',
+                                         'highest_mW',
+                                         'latitude',
+                                         'longitude',
+                                         'street_address',
+                                         'time_to_facility(hours)',
+                                         'score',
+                                         'mW_per_minute'])
+
             # determine the bounds for the state the user has submitted.
             boundaries = determine_state_bounds(state, filters)
             demsg(boundaries)
+
+            # Add the entire search zone that user specified to the filters list and query.
+            filters.append(Solar_List.state.in_(search_group))
+            records = Solar_List.query.filter(*filters).all()
+
+            # Iterate over every record and add them to the DataFrame for processing.
+            for record in records:
+                if record.latitude is None or record.longitude is None:
+                    demsg(f'No latitude or longitude found for record {record.id}')
+                    continue
+                else:
+                    data = pd.concat([data, get_record_dataframe(record)], ignore_index=True)
+            demsg(data.head())
+
+            # Create a grid to search over using the calculated state boundaries.
+
 
             return redirect(url_for('webviews.state_search'))
 
@@ -161,8 +193,11 @@ def show_all_facilities():
     locations = Solar_List.query.filter_by(uploaded_datetime=get_recent_upload_time()).all()
 
     for location in locations: # Add a marker for each location
-        folium.Marker(location=[location.lat, location.lon],
-                      popup=f'{location.name}\n({location.lat}, {location.lon})',
+        if location.latitude is None or location.longitude is None:
+            demsg(f'{location.id} {location.plant_name} {location.latitude} {location.longitude}')
+            continue
+        folium.Marker(location=[location.latitude, location.longitude],
+                      popup=f'{location.plant_name}\n({location.latitude}, {location.longitude})',
                       icon=folium.Icon(icon='cloud', color='green')
                       ).add_to(m)
 
@@ -243,3 +278,33 @@ def get_street_address(record):
     :return: String containing full U.S. street address.
     """
     return f'{record.street_address}, {record.city}, {record.state} {record.zip}'
+
+
+def get_record_dataframe(record):
+    """
+    Returns a pandas DataFrame of data to be appended to dataframe of temporary data.
+    This is for things like highest_wattage, street address, and later, score, ttf, etc.
+    :return: DataFrame containing data to be appended to dataframe of temporary data.
+    """
+    # Create a dictionary that will be appended to the pandas DataFrame.
+    row = {'id': record.id,
+           'highest_mW': record.ac_capacity if record.ac_capacity > record.dc_capacity else record.dc_capacity,
+           'latitude': record.latitude,
+           'longitude': record.longitude,
+           'street_address': get_street_address(record),
+           'time_to_facility(hours)': None,
+           'score': None,
+           'mW_per_minute': None
+           }
+
+    return pd.DataFrame([row])
+
+
+def create_map_grid(coords, precision=0.1):
+    """
+    Create a grid to search over based on the calculated state bounds.
+    :param coords: A dictionary containing the latitude and longitude coordinates.
+    :param precision: The precision of the grid coordinates, provided through the SearchForm
+    :return: A list of grid coordinates based on the precision the user provided
+    """
+

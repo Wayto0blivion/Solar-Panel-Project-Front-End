@@ -3,6 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <title>Home</title>
+
+    <style>
+        input[type="range"] {
+            background: darkgreen;
+            outline: none;
+            border-radius: 5px;
+        }
+        input[type="range"] {}
+        input[type="range"] {}
+    </style>
 </head>
 <body>
 <div>
@@ -11,8 +21,24 @@
         {{ form.hidden_tag() }}
         {{ form.new_facility_state_code.label }}
         {{ form.new_facility_state_code }}
+        <br>
         {{ form.states_search.label }}
         {{ form.states_search }}
+        <br>
+        <label for="slider">Search Precision</label>
+        <input
+        type="range"
+        id="slider"
+        name="slider"
+        min="0.02"
+        max="0.5"
+        step="0.01"
+        value="{{ form.precision.data or form.precision.default }}"
+        oninput="this.nextElementSibling.value = this.value"
+        style="background: green; outline: #34ff00; opacity: 0.7; color: green;"
+        >
+        <output>{{ form.precision.data or form.precision.default }}</output>
+        <br>
         {{ form.submit }}
     </form>
 </div>

@@ -1,6 +1,7 @@
 from flask_wtf import FlaskForm
-from wtforms import StringField, SubmitField, FileField
-from wtforms.validators import DataRequired, Optional
+from wtforms import FloatField, IntegerField, StringField, SubmitField, FileField
+from wtforms.fields.numeric import FloatField
+from wtforms.validators import DataRequired, NumberRange, Optional
 
 
 class WeightForm(FlaskForm):
@@ -25,10 +26,11 @@ class SearchForm(FlaskForm):
     """
     new_facility_state_code = StringField('New Facility State Code', validators=[DataRequired()])
     states_search = StringField('States Search')
+    # Allows user to choose how precise they want the returned results to be.
+    precision = FloatField('Precision', default=0.1, validators=[NumberRange(min=0.02, max=0.5), DataRequired()])
     # TODO: Include maximum travel time IntegerField that the user can adjust.
     # TODO: Add required email field where user can be emailed the results.
-    # TODO: Add Checkbox so user can exclude results that havent begun construction (Under Development)
-    # TODO: Add Slider that allows user to adjust map precision for results.
+    # TODO: Add Checkbox so user can exclude results that haven't begun construction (Under Development)
     submit = SubmitField('Search')
 
 
