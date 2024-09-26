@@ -1,0 +1,20 @@
+ * Serving Flask app 'flask_site.py'
+ * Debug mode: on
+WARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:4500
+ * Running on http://192.168.3.83:4500
+Press CTRL+C to quit
+ * Restarting with stat
+ * Debugger is active!
+ * Debugger PIN: 105-448-901
+127.0.0.1 - - [26/Sep/2024 15:53:45] "GET /web/state-search HTTP/1.1" 200 -
+State: TX
+User set this precision: 0.1
+{'min_lat': 25.94113, 'max_lat': 34.913, 'min_lon': -106.4275, 'max_lon': -93.29814}
+Empty DataFrame
+Columns: [id, highest_mW, latitude, longitude, street_address, time_to_facility(hours), score, mW_per_minute]
+Index: []
+Best Location: [  25.94113 -106.4275 ]
+127.0.0.1 - - [26/Sep/2024 15:53:51] "POST /web/state-search HTTP/1.1" 302 -
+127.0.0.1 - - [26/Sep/2024 15:53:51] "GET /web/state-search HTTP/1.1" 200 -

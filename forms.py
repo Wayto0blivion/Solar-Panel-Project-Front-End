@@ -31,6 +31,7 @@ class SearchForm(FlaskForm):
     # TODO: Include maximum travel time IntegerField that the user can adjust.
     # TODO: Add required email field where user can be emailed the results.
     # TODO: Add Checkbox so user can exclude results that haven't begun construction (Under Development)
+    # TODO: Allow user to select profile for either 'driving-car' or 'driving-hgv'
     submit = SubmitField('Search')
 
 

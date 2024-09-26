@@ -26,6 +26,8 @@ webviews = Blueprint('webviews', __name__)
 # Coordinates of Lebanon, Kansas, near the center of the contiguous U.S. states.
 # This is used for full U.S. folium maps.
 us_center_coords = [39.809860, -98.555183]
+# Temporary stand in for max travel time that will be user modifiable in the future.
+max_travel_time = 15.0  # Float in hours
 
 
 @webviews.route('/')
@@ -36,6 +38,36 @@ def web_home():
     :return: HTML landing page with links.
     """
     return render_template('webviews_home.html')
+
+
+@webviews.route('/show-all-facilities', methods=['GET'])
+def show_all_facilities():
+    """
+    Show all the recently uploaded facilities across the U.S.
+    :return: HTML folium map with all the facilities plotted.
+    """
+    # Create an empty map centered on Lebanon, Kansas.
+    m = folium.Map(location=us_center_coords, zoom_start=5)
+    # Query the database for a list of facilities
+    locations = Solar_List.query.filter_by(uploaded_datetime=get_recent_upload_time()).all()
+
+    for location in locations: # Add a marker for each location
+        if location.latitude is None or location.longitude is None:
+            demsg(f'{location.id} {location.plant_name} {location.latitude} {location.longitude}')
+            continue
+        folium.Marker(location=[location.latitude, location.longitude],
+                      popup=f'{location.plant_name}\n({location.latitude}, {location.longitude})',
+                      icon=folium.Icon(icon='cloud', color='green')
+                      ).add_to(m)
+
+    # Saves the map to the user data folder so that it doesn't need to be generated a
+    # second time by the user to view again.
+    m.save(f'./UserData/all_us_facilities_{datetime.date.today()}.html')
+
+    # Converts the folium map to html so that it can be displayed directly.
+    map_html = m._repr_html_()
+    # Returns the map html to be used in a template.
+    return render_template('webviews_display_map.html', map_html=map_html)
 
 
 @webviews.route('/import', methods=['GET', 'POST'])
@@ -123,6 +155,9 @@ def state_search():
         demsg('State:', state)
         # Get a reference to the states the user wants to include in the search.
         search_group = form.states_search.data
+        # Get a reference to the search precision the user has chosen.
+        precision = form.precision.data
+        demsg('User set this precision:', precision)
         # Split and strip the group of states the user has included. If they did not include one, use the
         # targeted state as the search group.
         if search_group is not None:
@@ -130,7 +165,7 @@ def state_search():
             for code in search_group:
                 code = code.strip().upper()
         else:
-            search_group = state
+            search_group = [state]
 
         # Get a SQLAlchemy query that contains the most recently uploaded data.
         # This is the most recent datetime uploaded.
@@ -170,7 +205,37 @@ def state_search():
             demsg(data.head())
 
             # Create a grid to search over using the calculated state boundaries.
+            search_grid = create_map_grid(boundaries, precision)
+            # TODO: Remove grid points that are not within the state bounds.
+            # Create a variable for storing the best_score and best_location
+            best_score = -np.inf  # This value will not show up organically, so it's good for debugging.
+            best_location = None  # Keeps track of the current best location if one has been found.
 
+            # This basically attaches the DataFrame to each point in the grid.
+            grid_data = [(point, data) for point in search_grid]
+
+            with Pool(processes=4) as pool:  # Start a multithreading process
+                results = pool.map(calculate_location_score, grid_data)
+
+            for location, score in results:  # Iterate over the return from the multithread Pool
+                # If the location has a better score, update best score and best location.
+                if score is not None and score > best_score:
+                    best_score = score
+                    best_location = location
+
+            if best_location is None:
+                demsg("Couldn't find a best location!")
+                return
+
+            demsg("Best Location:", best_location)
+
+            # Create a map with the best location as the only point.
+            m = folium.Map(location=best_location, zoom_start=7)
+            folium.Marker(location=best_location).add_to(m)
+            m.save(f'./UserData/best_location_{state}_{datetime.date.today()}.html')
+
+            # Save the DataFrame to an Excel file.
+            data.to_excel(f'./UserData/best_location_data_{state}_{datetime.date.today()}.xlsx', index=False)
 
             return redirect(url_for('webviews.state_search'))
 
@@ -181,34 +246,88 @@ def state_search():
     return render_template('webviews_search.html', form=form)
 
 
-@webviews.route('/show-all-facilities', methods=['GET'])
-def show_all_facilities():
+def calculate_location_score(args):
     """
-    Show all the recently uploaded facilities across the U.S.
-    :return: HTML folium map with all the facilities plotted.
+    Handles calculation of multithreaded locations.
+    The real purpose is as an interface for multithreading that allows me to
+    simplify calculating so many scores at once.
+    This differs from calculate_score, but they don't necessarily need to be separate.
+    :param args: Takes a tuple with the grid point and the data DataFrame
+    :return: Tuple with location and score, or location and None if no score could be determined.
     """
-    # Create an empty map centered on Lebanon, Kansas.
-    m = folium.Map(location=us_center_coords, zoom_start=5)
-    # Query the database for a list of facilities
-    locations = Solar_List.query.filter_by(uploaded_datetime=get_recent_upload_time()).all()
+    location, data = args
+    try:
+        score = calculate_score(location, data)
+        return (location, score)
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return (location, None)
 
-    for location in locations: # Add a marker for each location
-        if location.latitude is None or location.longitude is None:
-            demsg(f'{location.id} {location.plant_name} {location.latitude} {location.longitude}')
+
+def calculate_score(location, data):
+    """
+    Handles the actual calculations for scores based on weighted distance. Returns a score for the location.
+    :param location: A grid coordinate consisting of lat and longitude.
+    :param data: A DataFrame that includes lat, long, and wattage.
+    :return: Float with the calculated score for the location.
+    """
+    score = 0  # Initialize an empty score.
+    highest_travel_time = 0  # Initialize an empty highest travel time.
+    travel_times = []  # List of travel times.
+
+    for index, row in data.iterrows():
+        # Create a list with coordinates
+        facility = [row['latitude'], row['longitude']]
+        # Calculate the travel time for the current facility to the grid point being compared.
+        travel_time = calculate_travel_time(location, facility)
+
+        if travel_time == np.inf:  # If no travel time could be determined, go to the next facility.
+            demsg('Couldn\'t determine travel time for', location, 'Continuing to next grid location.')
             continue
-        folium.Marker(location=[location.latitude, location.longitude],
-                      popup=f'{location.plant_name}\n({location.latitude}, {location.longitude})',
-                      icon=folium.Icon(icon='cloud', color='green')
-                      ).add_to(m)
+        if travel_time > max_travel_time:  # Don't assess locations with too long of a travel time.
+            demsg(f'{index}: Travel time of {travel_time} is too great! Limit set to {max_travel_time}.')
+            return -np.inf
 
-    # Saves the map to the user data folder so that it doesn't need to be generated a
-    # second time by the user to view again.
-    m.save(f'./UserData/all_us_facilities_{datetime.date.today()}.html')
+        score += row['highest_mW'] / max(1, travel_time)  # Add the facility score to the total location score.
+        travel_times.append(travel_time)  # Add the travel time to the list of travel times to determine an avg.
+        if travel_time > highest_travel_time:  # Keep track of the highest travel time for a location.
+            highest_travel_time = travel_time
 
-    # Converts the folium map to html so that it can be displayed directly.
-    map_html = m._repr_html_()
-    # Returns the map html to be used in a template.
-    return render_template('webviews_display_map.html', map_html=map_html)
+    if highest_travel_time > 0:  # Make sure the highest travel time exists.
+        demsg('Highest Travel Time:', highest_travel_time)
+
+    # Calculate the average travel time from this location to all facilities.
+    if len(travel_times) > 0:
+        avg = sum(travel_times) / len(travel_times)
+        demsg(location, 'travel avg:', avg)
+    else:
+        avg = np.inf
+
+    return score
+
+
+def calculate_travel_time(start, end):
+    """
+    Calculates the travel time between two points using ORS
+    :param start: The grid coordinates to start at.
+    :param end: The location of the facility whose distance is being calculated.
+    :return: Float with the duration in hours, or np.inf if no route was found.
+    """
+    coords = ((start[1], start[0]), (end[1], end[0]))  # Reverse the order of the coords so longitude is first.
+    routes = None  # Initialize an empty route.
+    try:
+        # Get available routes from ORS.
+        routes = ors_client.directions(coordinates=coords, profile='driving-hgv')
+        return routes['routes'][0]['summary']['duration'] / 3600  # Get the duration in hours.
+    except Exception as e:
+        import traceback
+        if routes:
+            demsg('Failed to return route for', start, end, routes)
+        else:
+            demsg('Failed to find a route for', start, end)
+        traceback.print_exc()
+        return np.inf
 
 
 def demsg(*args):
@@ -250,8 +369,8 @@ def determine_state_bounds(state, filters=None):
     query = Solar_List.query.filter(*filters)
 
     # This is a debug function designed to help verify that state bounds are printing correctly.
-    for entry in query.all():
-        demsg('Determine state bounds:', entry.id, entry.state)
+    # for entry in query.all():
+    #     demsg('Determine state bounds:', entry.id, entry.state)
 
     # Get a reference to the bounds for each point.
     min_lat = query.with_entities(func.min(Solar_List.latitude)).scalar() if not None else None
@@ -300,11 +419,26 @@ def get_record_dataframe(record):
     return pd.DataFrame([row])
 
 
-def create_map_grid(coords, precision=0.1):
+def create_map_grid(boundaries, precision=0.1):
     """
     Create a grid to search over based on the calculated state bounds.
-    :param coords: A dictionary containing the latitude and longitude coordinates.
+    :param boundaries: A dictionary containing the latitude and longitude coordinates.
     :param precision: The precision of the grid coordinates, provided through the SearchForm
     :return: A list of grid coordinates based on the precision the user provided
     """
+    grid = (np.mgrid[boundaries['min_lat']:boundaries['max_lat']:precision,
+            boundaries['min_lon']:boundaries['max_lon']:precision]
+            .reshape(2, -1).T
+    )
+    return grid
+
+
+
+
+
+
+
+
+
+
 
