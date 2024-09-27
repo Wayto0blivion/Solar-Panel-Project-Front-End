@@ -64,7 +64,14 @@ def serve_user_data(filename):
     return send_from_directory(user_data_folder, filename)
 
 
-
+@webviews.route('/download/<path:filename>')
+def download_file(filename):
+    """
+    Downloads a user-selected file.
+    :param filename: The filepath for the file to be downloaded.
+    :return: Attachment containing the file the user requested.
+    """
+    return send_from_directory(user_data_folder, filename, as_attachment=True)
 
 
 @webviews.route('/show-all-facilities', methods=['GET'])
