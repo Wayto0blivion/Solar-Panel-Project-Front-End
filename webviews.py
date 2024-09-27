@@ -2,11 +2,11 @@
 Created: 09-23-24
 Creator: Dustin
 """
-
+import openrouteservice
 
 from __init__ import db, ors_client, solarEngine
 import datetime
-from flask import Flask, Blueprint, render_template, flash, redirect, url_for
+from flask import Flask, Blueprint, render_template, flash, redirect, url_for, send_from_directory, safe_join
 from forms import ImportForm, SearchForm
 import folium
 from models import Solar_List
@@ -23,6 +23,7 @@ from sqlalchemy.inspection import inspect
 
 
 webviews = Blueprint('webviews', __name__)
+user_data_folder = 'UserData'
 
 # Coordinates of Lebanon, Kansas, near the center of the contiguous U.S. states.
 # This is used for full U.S. folium maps.
@@ -38,10 +39,32 @@ def web_home():
     for user interaction.
     :return: HTML landing page with links.
     """
-    coords = [31.14113, -97.8275]
-    address = address_search(coords)
-    demsg(address)
+
     return render_template('webviews_home.html')
+
+
+@webviews.route('/files')
+def list_files():
+    """
+    Lists all files for the user to view or download.
+    :return:
+    """
+    files = os.listdir(user_data_folder)
+    # Filter out files here that don't need to be displayed, if necessary.
+    return render_template('webviews_display_files.html', files=files)
+
+
+@webviews.route('/user_data/<path:filename>')
+def serve_user_data(filename):
+    """
+    Lets user interact with files inside the UserData directory.
+    :param filename: The filename of the file the user is interested in.
+    :return: The file the user is requesting.
+    """
+    return send_from_directory(user_data_folder, filename)
+
+
+
 
 
 @webviews.route('/show-all-facilities', methods=['GET'])
@@ -482,8 +505,36 @@ def address_search(coords):
         return None
 
 
+def reverse_geocode_coordinate(coord):
+    """
+    Perform reverse geocoding to find the address of a coordinate.
 
+    :param coord: A tuple or list with coordinates to get an address for containing (latitude, longitude)
+    :return: A dictionary containing address details or None if not found.
+    """
+    # TODO: This requires the setup of a Pelias server to do revere geocoding.
+    try:
+        # Coordinate order is longitude, latitude for ORS.
+        response = openrouteservice.geocode.pelias_reverse(
+            client=ors_client,
+            point=[coord[1], coord[0]],
+            size=1,
+        )
+        if response and 'features' in response and len(response['features']) > 0:
+            return response['features'][0]['properties']
+        else:
+            demsg(f'No address found for coordinate: {coord}')
+            return None
 
-
+    except ors_exceptions.ApiError as e:
+        import traceback
+        demsg(f'API Error during reverse geocoding: {coord}')
+        traceback.print_exc()
+        return None
+    except Exception as e:
+        import traceback
+        demsg(f'An unknown error occurred during reverse geocoding: {e}')
+        traceback.print_exc()
+        return None
 
 
