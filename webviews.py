@@ -38,6 +38,9 @@ def web_home():
     for user interaction.
     :return: HTML landing page with links.
     """
+    coords = [31.14113, -97.8275]
+    address = address_search(coords)
+    demsg(address)
     return render_template('webviews_home.html')
 
 
@@ -456,8 +459,27 @@ def create_map_grid(boundaries, precision=0.1):
     return grid
 
 
+def address_search(coords):
+    """
+    Runs a reverse pelias search against the coordinates to check what address it matches up to.
+    :param coords: A tuple or list with coordinates to get an address for.
+    :return: A dictionary containing address details or None if not found.
+    """
+    try:
+        # Note: The coordinate order is (longitude, latitude) for ORS.
+        params = {'point.lon': coords[1], 'point.lat': coords[0]}
+        response = ors_client.pelias_reverse(params)
+        if response and 'features' in response and len(response['features']) > 0:
+            return response['features'][0]['properties']
+        else:
+            print(f'No address found for coordinate: {coords}')
 
-
+    except ors_exceptions.ApiError as e:
+        demsg(f'No address found for coordinate: {coords}')
+        return None
+    except Exception as e:
+        demsg(f'An error occurred during reverse geocoding: {e}')
+        return None
 
 
 
