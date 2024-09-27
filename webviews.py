@@ -15,9 +15,10 @@ import pandas as pd
 from openrouteservice import client
 from multiprocessing import Pool
 import csv
+from openrouteservice import exceptions as ors_exceptions
 import os
 from werkzeug.utils import secure_filename
-from sqlalchemy import func
+from sqlalchemy import func, cast, Date
 from sqlalchemy.inspection import inspect
 
 
@@ -103,7 +104,7 @@ def web_import():
             # Drop the first 3 columns from the dataframe, as these are left empty.
             df = df.iloc[:, 4:]
             # Add the current datetime as a column so that all the entries have an upload period.
-            uploaded_datetime = datetime.datetime.now()
+            uploaded_datetime = datetime.datetime.now().replace(microsecond=0)
             df['uploaded_datetime'] = uploaded_datetime
             # Get a list of column names from the model in models.py
             column_names = get_model_column_names(Solar_List)
@@ -160,22 +161,21 @@ def state_search():
         demsg('User set this precision:', precision)
         # Split and strip the group of states the user has included. If they did not include one, use the
         # targeted state as the search group.
-        if search_group is not None:
-            search_group = search_group.split(',')
-            for code in search_group:
-                code = code.strip().upper()
+        if search_group != '':
+            search_group = [code.strip().upper() for code in search_group.split(',')]
         else:
             search_group = [state]
 
         # Get a SQLAlchemy query that contains the most recently uploaded data.
         # This is the most recent datetime uploaded.
         most_recent_datetime = get_recent_upload_time()
+        demsg('Time:', most_recent_datetime)
 
         try:
             # Check if any records exist. If so, continue processing.
             if most_recent_datetime is None:
                 raise ValueError('No most recently uploaded datetime found.')
-            filters.append(Solar_List.uploaded_datetime == most_recent_datetime)
+            filters.append(cast(Solar_List.uploaded_datetime, Date) == most_recent_datetime.date())
 
             # Create an empty pandas Dataframe to store data that will later be exported to an Excel spreadsheet.
             data = pd.DataFrame(columns=['id',
@@ -194,6 +194,7 @@ def state_search():
             # Add the entire search zone that user specified to the filters list and query.
             filters.append(Solar_List.state.in_(search_group))
             records = Solar_List.query.filter(*filters).all()
+            demsg('Number of records:', len(records))
 
             # Iterate over every record and add them to the DataFrame for processing.
             for record in records:
@@ -320,6 +321,14 @@ def calculate_travel_time(start, end):
         # Get available routes from ORS.
         routes = ors_client.directions(coordinates=coords, profile='driving-hgv')
         return routes['routes'][0]['summary']['duration'] / 3600  # Get the duration in hours.
+    except ors_exceptions.ApiError as e:
+        error_code = e.args[0]['error']['code']
+        if error_code == 2010:
+            demsg(f'No routable point near coordinate: {e}')
+        elif error_code == 2004:
+            demsg(f'Route distance exceeds limit: {e}')
+        else:
+            demsg(f'API Error: {e}')
     except Exception as e:
         import traceback
         if routes:
@@ -363,20 +372,23 @@ def determine_state_bounds(state, filters=None):
     :param filters: The list of filters used for the SQLAlchemy query.
     :return: A dictionary containing the minimum and maximum boundaries.
     """
+    if filters is None:
+        filters = []
+    bound_filters = filters.copy()
     # Add the state as temporary filter for this query if state was provided.
-    filters.append(Solar_List.state == state)
+    bound_filters.append(Solar_List.state == state)
     # Filter the results from the database
-    query = Solar_List.query.filter(*filters)
+    query = Solar_List.query.filter(*bound_filters)
 
     # This is a debug function designed to help verify that state bounds are printing correctly.
     # for entry in query.all():
     #     demsg('Determine state bounds:', entry.id, entry.state)
 
     # Get a reference to the bounds for each point.
-    min_lat = query.with_entities(func.min(Solar_List.latitude)).scalar() if not None else None
-    max_lat = query.with_entities(func.max(Solar_List.latitude)).scalar() if not None else None
-    min_lon = query.with_entities(func.min(Solar_List.longitude)).scalar() if not None else None
-    max_lon = query.with_entities(func.max(Solar_List.longitude)).scalar() if not None else None
+    min_lat = query.with_entities(func.min(Solar_List.latitude)).scalar()
+    max_lat = query.with_entities(func.max(Solar_List.latitude)).scalar()
+    min_lon = query.with_entities(func.min(Solar_List.longitude)).scalar()
+    max_lon = query.with_entities(func.max(Solar_List.longitude)).scalar()
 
     # Return the dictionary with the results.
     return {'min_lat': min_lat, 'max_lat': max_lat, 'min_lon': min_lon, 'max_lon': max_lon}
@@ -405,9 +417,14 @@ def get_record_dataframe(record):
     This is for things like highest_wattage, street address, and later, score, ttf, etc.
     :return: DataFrame containing data to be appended to dataframe of temporary data.
     """
+    # Set the ac or dc capacity after making sure both exist.
+    capacity = None
+    if record.ac_capacity and record.dc_capacity:
+        capacity = record.ac_capacity if record.ac_capacity > record.dc_capacity else record.dc_capacity
+
     # Create a dictionary that will be appended to the pandas DataFrame.
     row = {'id': record.id,
-           'highest_mW': record.ac_capacity if record.ac_capacity > record.dc_capacity else record.dc_capacity,
+           'highest_mW': capacity,
            'latitude': record.latitude,
            'longitude': record.longitude,
            'street_address': get_street_address(record),

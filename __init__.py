@@ -5,7 +5,7 @@ from openrouteservice import client
 db = SQLAlchemy()
 
 ors_API_key = '5b3ce3597851110001cf624819743d9af4454a189cb1389e6f22df78'
-base_url = 'http://192.168.3.104:8080/ors'
+base_url = 'http://192.168.3.45:8080/ors'
 ors_client = client.Client(key=ors_API_key, base_url=base_url)
 
 
