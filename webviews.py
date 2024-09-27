@@ -421,6 +421,12 @@ def get_record_dataframe(record):
     capacity = None
     if record.ac_capacity and record.dc_capacity:
         capacity = record.ac_capacity if record.ac_capacity > record.dc_capacity else record.dc_capacity
+    elif record.ac_capacity:
+        capacity = record.ac_capacity
+    elif record.dc_capacity:
+        capacity = record.dc_capacity
+    else:
+        capacity = 1
 
     # Create a dictionary that will be appended to the pandas DataFrame.
     row = {'id': record.id,
