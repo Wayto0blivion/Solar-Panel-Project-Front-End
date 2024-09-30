@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Map Generation Home</title>
+</head>
+<body>
+    <h1>SEIA Map Generator</h1>
+    <h3>Options</h3>
+    <ul>
+        <li>
+            <a href="{{ url_for('webviews.list_files') }}">View All Files</a>
+            <p>
+                Lists all files that have been generated.
+            </p>
+        </li>
+
+        <li>
+            <a href="{{ url_for('webviews.state_search') }}">Generate New Map</a>
+            <p>
+                Generate new data for any state.
+            </p>
+        </li>
+        <li>
+            <a href="{{ url_for('webviews.web_import') }}">Import New SEIA Data</a>
+            <p>
+                Import new SEIA data.
+            </p>
+        </li>
+    </ul>
+</body>
+</html>

@@ -1,6 +1,7 @@
 from flask_wtf import FlaskForm
 from wtforms import FloatField, IntegerField, StringField, SubmitField, FileField
 from wtforms.fields.numeric import FloatField
+from wtforms.fields.simple import BooleanField
 from wtforms.validators import DataRequired, NumberRange, Optional
 
 
@@ -28,9 +29,9 @@ class SearchForm(FlaskForm):
     states_search = StringField('States Search')
     # Allows user to choose how precise they want the returned results to be.
     precision = FloatField('Precision', default=0.1, validators=[NumberRange(min=0.02, max=0.5), DataRequired()])
-    # TODO: Include maximum travel time IntegerField that the user can adjust.
+    max_travel_time = FloatField('Maximum Travel Time', default=15, validators=[DataRequired()])
+    under_development = BooleanField('Exclude Under Development', default=False)
     # TODO: Add required email field where user can be emailed the results.
-    # TODO: Add Checkbox so user can exclude results that haven't begun construction (Under Development)
     # TODO: Allow user to select profile for either 'driving-car' or 'driving-hgv'
     submit = SubmitField('Search')
 

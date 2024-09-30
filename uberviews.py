@@ -1,6 +1,6 @@
 from __init__ import db
 import datetime
-from flask import Flask, Blueprint, render_template, flash
+from flask import Flask, Blueprint, render_template, flash, redirect, url_for
 from forms import ImportForm
 import folium
 from models import Solar2024
@@ -33,9 +33,10 @@ def home():
     Determines the best location for a facility and creates a map.
     :return:
     """
-    determine_location()
-
-    return render_template('home.html')
+    # determine_location()
+    #
+    # return render_template('home.html')
+    return redirect(url_for('webviews.web_home'))
 
 
 # Add trimmed information to database in the form of a CSV file.

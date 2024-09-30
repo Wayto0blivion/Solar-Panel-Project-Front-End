@@ -1,5 +1,5 @@
 from __init__ import db
-from flask import Flask, Blueprint, render_template
+from flask import Flask, Blueprint, render_template, redirect, url_for
 import folium
 from folium.plugins import MarkerCluster, HeatMap
 from forms import WeightForm
@@ -873,61 +873,63 @@ def get_custom_weights():
     :return:
     """
 
-    form = WeightForm()
-    errors = ''
-    shape = {}
+    # form = WeightForm()
+    # errors = ''
+    # shape = {}
+    #
+    #
+    # if form.validate_on_submit():
+    #     # print(form.street_address.data, form.city.data, form.state.data, form.zip.data)
+    #
+    #     address = f'{form.street_address.data}, {form.city.data}, {form.state.data} {str(form.zip.data)}'
+    #     # print(address)
+    #
+    #     lat, long = geopy_coords(address)
+    #     coords = (lat, long)
+    #
+    #     score = 0
+    #
+    #     current_facilities = Solar_List.query.filter_by(state="FL").all()
+    #
+    #     for facility in current_facilities:
+    #         try:
+    #
+    #             if facility.technology == "Batteries":
+    #                 print(facility.id, "Batteries!")
+    #                 continue
+    #
+    #             id = facility.id
+    #             facility_address = f'{facility.street_address}, {facility.city}, {facility.state} {facility.zip}'
+    #             # print(facility_address)
+    #             facility_coords = (facility.latitude, facility.longitude)
+    #             highest_wattage = Florida_Facility.query.filter_by(id=id).first().highest_wattage
+    #             # print(highest_wattage)
+    #             time = travel_time(coords, facility_coords)
+    #
+    #             # if time is np.inf:
+    #             #     new_lat, new_long = geopy_coords(facility_address)
+    #             #     new_coords = (new_lat, new_long)
+    #             #     time = travel_time(coords, new_coords)
+    #             # print(time)
+    #
+    #             if time is not np.inf:
+    #                 mw_minute = highest_wattage / (time)
+    #                 score += mw_minute
+    #                 shape[id] = {"address": facility_address, "coordinates": facility_coords,
+    #                              "wattage": highest_wattage, "time": time/60, "mwm": mw_minute}
+    #             else:
+    #                 print("Infinite Time!", id, facility_address)
+    #
+    #         except Exception as e:
+    #             errors += (str(e) + '\n')
+    #
+    #     errors += str(score)
+    #
+    #     return render_template('Cleanup (old html files)/home.html', form=form, errors=errors, shape=shape)
+    #
+    # return render_template('Cleanup (old html files)/home.html', form=form, errors=errors, shape=shape)
 
-
-    if form.validate_on_submit():
-        # print(form.street_address.data, form.city.data, form.state.data, form.zip.data)
-
-        address = f'{form.street_address.data}, {form.city.data}, {form.state.data} {str(form.zip.data)}'
-        # print(address)
-
-        lat, long = geopy_coords(address)
-        coords = (lat, long)
-
-        score = 0
-
-        current_facilities = Solar_List.query.filter_by(state="FL").all()
-
-        for facility in current_facilities:
-            try:
-
-                if facility.technology == "Batteries":
-                    print(facility.id, "Batteries!")
-                    continue
-
-                id = facility.id
-                facility_address = f'{facility.street_address}, {facility.city}, {facility.state} {facility.zip}'
-                # print(facility_address)
-                facility_coords = (facility.latitude, facility.longitude)
-                highest_wattage = Florida_Facility.query.filter_by(id=id).first().highest_wattage
-                # print(highest_wattage)
-                time = travel_time(coords, facility_coords)
-
-                # if time is np.inf:
-                #     new_lat, new_long = geopy_coords(facility_address)
-                #     new_coords = (new_lat, new_long)
-                #     time = travel_time(coords, new_coords)
-                # print(time)
-
-                if time is not np.inf:
-                    mw_minute = highest_wattage / (time)
-                    score += mw_minute
-                    shape[id] = {"address": facility_address, "coordinates": facility_coords,
-                                 "wattage": highest_wattage, "time": time/60, "mwm": mw_minute}
-                else:
-                    print("Infinite Time!", id, facility_address)
-
-            except Exception as e:
-                errors += (str(e) + '\n')
-
-        errors += str(score)
-
-        return render_template('Cleanup (old html files)/home.html', form=form, errors=errors, shape=shape)
-
-    return render_template('Cleanup (old html files)/home.html', form=form, errors=errors, shape=shape)
+    return redirect(url_for('webviews.web_home'))
 
 
 def travel_time(start, end):

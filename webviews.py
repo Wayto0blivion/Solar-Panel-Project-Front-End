@@ -6,7 +6,7 @@ import openrouteservice
 
 from __init__ import db, ors_client, solarEngine
 import datetime
-from flask import Flask, Blueprint, render_template, flash, redirect, url_for, send_from_directory, safe_join
+from flask import Flask, Blueprint, render_template, flash, redirect, url_for, send_from_directory
 from forms import ImportForm, SearchForm
 import folium
 from models import Solar_List
@@ -20,6 +20,7 @@ import os
 from werkzeug.utils import secure_filename
 from sqlalchemy import func, cast, Date
 from sqlalchemy.inspection import inspect
+import time
 
 
 webviews = Blueprint('webviews', __name__)
@@ -41,6 +42,7 @@ def web_home():
     """
 
     return render_template('webviews_home.html')
+    # return redirect(url_for('webviews.list_files'))
 
 
 @webviews.route('/files')
@@ -179,6 +181,9 @@ def state_search():
     form = SearchForm()
 
     if form.validate_on_submit():
+        # Start a timer to calculate how long the function takes.
+        start_time = time.perf_counter()
+
         # Create an empty list to store filters. These filters can then be passed into other functions to further
         # refine the search queries without having to do it all over again.
         query = Solar_List.query
@@ -259,7 +264,7 @@ def state_search():
 
             if best_location is None:
                 demsg("Couldn't find a best location!")
-                return
+                return redirect(url_for('webviews.state_search'))
 
             demsg("Best Location:", best_location)
 
@@ -271,11 +276,19 @@ def state_search():
             # Save the DataFrame to an Excel file.
             data.to_excel(f'./UserData/best_location_data_{state}_{datetime.date.today()}.xlsx', index=False)
 
+            end_time = time.perf_counter()
+            demsg(f'Total time: {end_time - start_time}')
+
             return redirect(url_for('webviews.state_search'))
 
         except Exception as e:
             import traceback
             traceback.print_exc()
+
+            end_time = time.perf_counter()
+            demsg(f'Total time: {end_time - start_time}')
+
+            return redirect(url_for('webviews.state_search'))
 
     return render_template('webviews_search.html', form=form)
 
@@ -291,6 +304,10 @@ def calculate_location_score(args):
     """
     location, data = args
     try:
+        # Make sure that there is a routable point near the generated grid coordinate.
+        if not has_routable_point(location):
+            demsg(f'No routable point near grid coordinate: {location}. Skipping...')
+            return (location, None)
         score = calculate_score(location, data)
         return (location, score)
     except Exception as e:
@@ -355,13 +372,19 @@ def calculate_travel_time(start, end):
         routes = ors_client.directions(coordinates=coords, profile='driving-hgv')
         return routes['routes'][0]['summary']['duration'] / 3600  # Get the duration in hours.
     except ors_exceptions.ApiError as e:
-        error_code = e.args[0]['error']['code']
+        # Access the error code correctly.
+        error_code = None
+        if len(e.args) > 1 and isinstance(e.args[1], dict):
+            error_info = e.args[1]
+            if 'error' in error_info and 'code' in error_info['error']:
+                error_code = error_info['error']['code']
         if error_code == 2010:
             demsg(f'No routable point near coordinate: {e}')
         elif error_code == 2004:
             demsg(f'Route distance exceeds limit: {e}')
         else:
             demsg(f'API Error: {e}')
+        return np.inf  # Ensure np.inf is returned in case of an error.
     except Exception as e:
         import traceback
         if routes:
@@ -543,5 +566,37 @@ def reverse_geocode_coordinate(coord):
         demsg(f'An unknown error occurred during reverse geocoding: {e}')
         traceback.print_exc()
         return None
+
+
+def has_routable_point(coord, radius=750.0):
+    """
+    Check if there is a routable point near the given coordinate.
+    :param coord: A tuple or list containing (latitude, longitude)
+    :param radius: The search radius in meters. Default is 750.0 meters.
+    :return: True if a routable point is found, False otherwise.
+    """
+    try:
+        # The coordinate order for ORS is [longitude, latitude]
+        # Setting the coords FROM and TO the same point just to check if a route can be determined.
+        coords = [[coord[1], coord[0]], [coord[1], coord[0]]]
+        # Radius's for each coordinate
+        radiuses = [radius, radius]
+        # Attempt to get the route.
+        ors_client.directions(
+            coordinates=coords,
+            profile='driving-hgv',
+            radiuses=radiuses,
+            format='json'
+        )
+        # If the request is successful, a routable point exists.
+        return True
+
+    except ors_exceptions.ApiError as e:
+        # Handle specific API errors if necessary.
+        demsg(f'API Error: has_routable_point {coord} : {e}')
+        return False
+    except Exception as e:
+        demsg(f'Unknown error occurred in has_routable_point for {coord}: {e}')
+        return False
 
 

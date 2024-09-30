@@ -5,9 +5,23 @@
 </head>
 <body>
     <h1>Available Files</h1>
+    <a href="{{ url_for('webviews.web_home') }}">
+        <button>Back</button>
+    </a>
+    <p>This is where user-generated files live after the calculations are complete. HTML files
+        will open in a new tab. Excel files will download once clicked.
+    </p>
     <ul>
         {% for file in files %}
-            <a href="{{ url_for('') }}"
+            <li>
+                {% if file.endswith('.html') %}
+                    <a href="{{ url_for('webviews.serve_user_data', filename=file) }}" target="_blank">{{ file }}</a>
+                {% elif file.endswith('.xlsx') %}
+                    <a href="{{ url_for('webviews.download_file', filename=file) }}">{{ file }}</a>
+                {% else %}
+                    {{ file }}
+                {% endif %}
+           </li>
         {% endfor %}
     </ul>
 </body>
