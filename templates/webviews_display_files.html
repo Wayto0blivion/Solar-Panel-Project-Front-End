@@ -1,13 +1,8 @@
-<!DOCTYPE html>
+{% extends '_base.html' %}
 <html lang="en">
-<head>
-    <title>User Data Files</title>
-</head>
-<body>
+{% block title %}User Data Files{% endblock %}
+{% block content %}
     <h1>Available Files</h1>
-    <a href="{{ url_for('webviews.web_home') }}">
-        <button>Back</button>
-    </a>
     <p>This is where user-generated files live after the calculations are complete. HTML files
         will open in a new tab. Excel files will download once clicked.
     </p>
@@ -24,5 +19,4 @@
            </li>
         {% endfor %}
     </ul>
-</body>
-</html>
+{% endblock %}
