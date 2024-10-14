@@ -33,6 +33,8 @@
         </div>
     </nav>
 
+    {{ render_messages(default_category='secondary', dismissible=True, dismiss_animate=True) }}
+
     {% block content %}{% endblock %}
 
     {% block scripts %}

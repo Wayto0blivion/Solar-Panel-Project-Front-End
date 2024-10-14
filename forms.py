@@ -14,7 +14,7 @@ class WeightForm(FlaskForm):
 
 
 class ImportForm(FlaskForm):
-    file = FileField('CSV', validators=[DataRequired()])
+    file = FileField('SEIA File', validators=[DataRequired()])
     submit = SubmitField('Import', validators=[Optional()])
 
 

@@ -1,21 +1,20 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Import SEIA File</title>
-</head>
-<body>
+{% extends '_base.html' %}
+{% from 'bootstrap5/form.html' import render_form, render_field %}
+
+{% block title %}Import SEIA File{% endblock %}
+
+{% block content %}
+<div class="container">
     <h1>Import New Data</h1>
-    <a href="{{ url_for('webviews.web_home') }}">
-        <button>Back</button>
-    </a>
-<div style="margin: 25px">
-    <form method="POST" enctype="multipart/form-data">
-        {{ form.csrf_token }}
-        {{ form.hidden_tag() }}
-        {{ form.file }}
-        {{ form.submit }}
-    </form>
+
+    <div style="margin: 25px">
+        <form method="POST" enctype="multipart/form-data">
+            {{ form.hidden_tag() }}
+            {{ render_form(form) }}
+        </form>
+    </div>
 </div>
-</body>
-</html>
+{% endblock %}
+
+
+

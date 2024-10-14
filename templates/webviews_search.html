@@ -1,71 +1,57 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Optimize State Location</title>
+{% extends '_base.html' %}
 
-    <style>
-        input[type="range"] {
-            -webkit-appearance: none;
-            appearance: none;
-            width: 250px;
-            height: 8px;
-            background: black;
-            outline: none;
-            border-radius: 5px;
-        }
-        input[type="range"]::-webkit-slider-thumb {
-            -webkit-appearance: none;
-            appearance: none;
-            width: 15px;
-            height: 10px;
-            background: limegreen;
-            cursor: pointer;
-        }
-        {#input[type="range"] {}#}
-    </style>
-</head>
-<body>
-    <h1>Generate State Map</h1>
-    <div>
-        <a href="{{ url_for('webviews.web_home') }}">
-            <button>Back</button>
-        </a>
-        <form method="POST" enctype="multipart/form-data">
-            {{ form.csrf_token }}
-            {{ form.hidden_tag() }}
-            <span>{{ form.new_facility_state_code.label }}
-            {{ form.new_facility_state_code }}</span>
-            <br>
-            <span>{{ form.states_search.label }}
-            {{ form.states_search }}</span>
-            <br>
-            <span><label for="slider">Search Precision</label>
-            <input
-            type="range"
-            id="slider"
-            name="slider"
-            min="0.02"
-            max="0.5"
-            step="0.01"
-            value="{{ form.precision.data or form.precision.default }}"
-            oninput="this.nextElementSibling.value = this.value"
-            >
-            <output>{{ form.precision.data or form.precision.default }}</output></span>
-            <br>
-            <span>{{ form.max_travel_time.label }}{{ form.max_travel_time }}</span>
-            <br>
-            {{ form.submit }}
-        </form>
+{% from 'bootstrap5/form.html' import render_form, render_field %}
+
+{% block title %}Optimize State Location{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1 class="mt-5">Generate State Map</h1>
+
+    <form method="POST" enctype="multipart/form-data">
+        {{ form.hidden_tag() }}
+
+        <!-- Render Individual Fields -->
+        {{ render_field(form.new_facility_state_code) }}
+        {{ render_field(form.states_search) }}
+
+        <!-- Customize the Slider Field -->
+        <div class="mb-3">
+            {{ form.precision.label(class="form-label") }}
+            {{ form.precision(
+                class="form-range",
+                type="range",
+                min="0.02",
+                max="0.5",
+                step="0.01",
+                value=form.precision.data or form.precision.default,
+                oninput="outputPrecision.value = precision.value",
+                id="precision"
+            ) }}
+            <output id="outputPrecision">{{ form.precision.data or form.precision.default }}</output>
+        </div>
+
+        {{ render_field(form.max_travel_time) }}
+
+        <!-- Render the Submit Button -->
+        {{ render_field(form.submit) }}
+    </form>
+
+    <div class="mt-4">
+        <!-- ... (Your instructions or additional content) ... -->
     </div>
-    <div>
-        <p>
-            To Generate a new map: <br>
-            Enter a state abbreviation in 'New Facility State Code'. <br>
-            Enter a group of state abbreviations, separated by commas, to include multiple states in the map. Leaving it blank will use the state from 'New Facility State Code'. <br>
-            Adjust the precision of the gridmap. The larger the value in 'Search Precision', the more coarse the search will be. <br>
-            Set a 'Maximum Travel Time' in hours. This is the maximum distance from the coordinate that a location can be to be included in the search.
-        </p>
-    </div>
-</body>
-</html>
+</div>
+
+<!-- Optional JavaScript for Slider Output -->
+<script>
+    const precisionSlider = document.getElementById('precision');
+    const outputPrecision = document.getElementById('outputPrecision');
+    precisionSlider.oninput = function() {
+        outputPrecision.value = this.value;
+    };
+</script>
+
+<div>
+
+</div>
+{% endblock %}

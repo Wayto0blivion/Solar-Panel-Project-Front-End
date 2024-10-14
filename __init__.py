@@ -27,7 +27,7 @@ def create_app():
         if 'theme' in session:
             app.config['BOOTSTRAP_BOOTSWATCH_THEME'] = session['theme']
         else:
-            app.config['BOOTSTRAP_BOOTSWATCH_THEME'] = 'spacelab'
+            app.config['BOOTSTRAP_BOOTSWATCH_THEME'] = 'minty'
 
     db.init_app(app)
 
