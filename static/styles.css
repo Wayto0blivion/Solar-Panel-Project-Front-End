@@ -1,0 +1,30 @@
+/* For the themes list, so that it doesn't extend past the top of the window.*/
+.dropdown-custom {
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+/* For the Title of the site, used to link to the home page on the navbar. */
+.nav-item-title {
+    font-size: 48px;
+}
+
+/* Custom styling for tables so that they remain pinned in the window. */
+.table-container {
+    max-height: calc(100vh - 50px); /* Adjust 200px based on your header/footer height */
+    overflow: auto;
+    width: 100%;
+}
+
+/* Optional: Ensure the table takes full width */
+.table-container table {
+    width: 100%;
+    table-layout: auto; /* Ensures consistent column widths */
+}
+
+/* Optional: Handle word wrapping in table cells */
+.table-container td, .table-container th {
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+}
+

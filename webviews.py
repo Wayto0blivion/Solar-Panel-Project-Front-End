@@ -2,11 +2,10 @@
 Created: 09-23-24
 Creator: Dustin
 """
-import openrouteservice
 
 from __init__ import db, ors_client, solarEngine
 import datetime
-from flask import Flask, Blueprint, render_template, flash, redirect, url_for, send_from_directory
+from flask import Flask, Blueprint, render_template, flash, redirect, url_for, send_from_directory, session, request
 from forms import ImportForm, SearchForm
 import folium
 from models import Solar_List
@@ -15,6 +14,7 @@ import pandas as pd
 from openrouteservice import client
 from multiprocessing import Pool
 import csv
+import openrouteservice
 from openrouteservice import exceptions as ors_exceptions
 import os
 from werkzeug.utils import secure_filename
@@ -43,6 +43,21 @@ def web_home():
 
     return render_template('webviews_home.html')
     # return redirect(url_for('webviews.list_files'))
+
+
+@webviews.route('/switch-theme/<theme>')
+def switch_theme(theme):
+    """
+    Allows the user to switch between default Bootswatch Themes
+    :param theme: String of theme to load.
+    :return: Redirect to source or home
+    """
+    available_themes = ['cerulean', 'cosmo', 'cyborg', 'darkly', 'flatly', 'journal', 'litera', 'lumen', 'lux',
+                        'materia', 'minty', 'pulse', 'sandstone', 'simplex', 'sketchy', 'slate', 'solar', 'spacelab',
+                        'superhero', 'united', 'yeti', 'morph', 'quartz', 'vapor', 'zephyr']
+    if theme in available_themes:
+        session['theme'] = theme
+    return redirect(request.referrer or url_for('stock_views.home'))
 
 
 @webviews.route('/files')
@@ -222,7 +237,6 @@ def state_search():
                                          'longitude',
                                          'street_address',
                                          'time_to_facility(hours)',
-                                         'score',
                                          'mW_per_minute'])
 
             # determine the bounds for the state the user has submitted.
@@ -371,6 +385,7 @@ def calculate_travel_time(start, end):
         # Get available routes from ORS.
         routes = ors_client.directions(coordinates=coords, profile='driving-hgv')
         return routes['routes'][0]['summary']['duration'] / 3600  # Get the duration in hours.
+
     except ors_exceptions.ApiError as e:
         # Access the error code correctly.
         error_code = None
@@ -385,6 +400,7 @@ def calculate_travel_time(start, end):
         else:
             demsg(f'API Error: {e}')
         return np.inf  # Ensure np.inf is returned in case of an error.
+
     except Exception as e:
         import traceback
         if routes:
@@ -491,7 +507,6 @@ def get_record_dataframe(record):
            'longitude': record.longitude,
            'street_address': get_street_address(record),
            'time_to_facility(hours)': None,
-           'score': None,
            'mW_per_minute': None
            }
 
@@ -600,3 +615,18 @@ def has_routable_point(coord, radius=750.0):
         return False
 
 
+def finalize_dataframe(best_location, data):
+    """
+    After calculating the best location, this function fills in the missing data for the pandas DataFrame.
+    :param best_location: A list or tuple containing the coordinates of the best location as (latitude, longitude)
+    :param data: The pandas DataFrame that will be converted to Excel for the user.
+    :return: Modified pandas DataFrame with the missing 3 columns finalized.
+    """
+    # Start a timer to track how long this finalization takes.
+    start_time = time.perf_counter()
+    for index, row in data.iterrows():
+        time_to_facility = calculate_travel_time(best_location, [row['latitude'], row['longitude']])
+
+    end_time = time.perf_counter()
+    elapsed_time = end_time - start_time
+    demsg(f'Elapsed time for data calculations: {elapsed_time}')
