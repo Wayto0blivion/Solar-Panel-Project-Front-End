@@ -653,6 +653,14 @@ def finalize_dataframe(best_location, data):
         # Assign the result back into the DataFrame
         data.at[index, 'time_to_facility(hours)'] = travel_time
 
+        if travel_time != np.inf:
+            if travel_time > 0:
+                data.at[index, "mW_per_minute"] = row['mW_per_minute'] / (travel_time * 60)
+            else:
+                data.at[index, "mW_per_minute"] = None
+        else:
+            data.at[index, "mW_per_minute"] = None
+
         if travel_time != np.inf and travel_time > 0:
             data.at[index, 'mW_per_minute'] = row['highest_mW'] / (travel_time * 60)
         else:
@@ -663,6 +671,7 @@ def finalize_dataframe(best_location, data):
     demsg(f'Elapsed time for data calculations: {elapsed_time}')
 
     return data
+
 
 def get_state_from_coordinate(lat, lon):
     """
