@@ -5,9 +5,10 @@ Creator: Dustin
 
 from __init__ import db, ors_client, solarEngine
 import datetime
-from flask import Flask, Blueprint, render_template, flash, redirect, url_for, send_from_directory, session, request
+from flask import Flask, Blueprint, current_app, render_template, flash, redirect, url_for, send_from_directory, session, request
 from forms import ImportForm, SearchForm
 import folium
+import geopandas as gpd
 from models import Solar_List
 import numpy as np
 import pandas as pd
@@ -18,6 +19,7 @@ import openrouteservice
 from openrouteservice import exceptions as ors_exceptions
 import os
 from werkzeug.utils import secure_filename
+from shapely.geometry import Point
 from sqlalchemy import func, cast, Date
 from sqlalchemy.inspection import inspect
 import time
@@ -31,6 +33,7 @@ user_data_folder = 'UserData'
 us_center_coords = [39.809860, -98.555183]
 # Temporary stand in for max travel time that will be user modifiable in the future.
 max_travel_time = 15.0  # Float in hours
+state_shapefile_path = "./static/us_state_geodata/tl_2024_us_state.shp"
 
 
 # TODO: Add coordinates to map point.
@@ -195,10 +198,12 @@ def state_search():
     They can specify a group of states to include in the search.
     :return:
     """
+    global max_travel_time
     form = SearchForm()
 
     if form.validate_on_submit():
         # Start a timer to calculate how long the function takes.
+        max_travel_time = form.max_travel_time.data
         start_time = time.perf_counter()
 
         # Create an empty list to store filters. These filters can then be passed into other functions to further
@@ -239,7 +244,8 @@ def state_search():
                                          'longitude',
                                          'street_address',
                                          'time_to_facility(hours)',
-                                         'mW_per_minute'])
+                                         'mW_per_minute',
+                                         ])
 
             # determine the bounds for the state the user has submitted.
             boundaries = determine_state_bounds(state, filters)
@@ -262,6 +268,20 @@ def state_search():
             # Create a grid to search over using the calculated state boundaries.
             search_grid = create_map_grid(boundaries, precision)
             # TODO: Remove grid points that are not within the state bounds.
+            states_gdf = gpd.read_file(state_shapefile_path)
+            # Create a small subset of data that is just the state polygon
+            state_polygon = states_gdf.loc[states_gdf["STUSPS"] == state, 'geometry'].values[0]
+
+            # Filter out grid points that lie outside the polygon.
+            filtered_grid = []
+            for lat, lon in search_grid:
+                point = Point(lon, lat)
+                if point.within(state_polygon): # OR state_polygon.contains(point)
+                    filtered_grid.append((lat, lon))
+
+            # Set the search grid to the filtered points.
+            search_grid = filtered_grid
+
             # Create a variable for storing the best_score and best_location
             best_score = -np.inf  # This value will not show up organically, so it's good for debugging.
             best_location = None  # Keeps track of the current best location if one has been found.
@@ -289,6 +309,7 @@ def state_search():
             folium.Marker(location=best_location).add_to(m)
             m.save(f'./UserData/best_location_{state}_{datetime.date.today()}.html')
 
+            data = finalize_dataframe(best_location, data)
             # Save the DataFrame to an Excel file.
             data.to_excel(f'./UserData/best_location_data_{state}_{datetime.date.today()}.xlsx', index=False)
 
@@ -627,8 +648,45 @@ def finalize_dataframe(best_location, data):
     # Start a timer to track how long this finalization takes.
     start_time = time.perf_counter()
     for index, row in data.iterrows():
-        time_to_facility = calculate_travel_time(best_location, [row['latitude'], row['longitude']])
+        travel_time = calculate_travel_time(best_location, [row['latitude'], row['longitude']])
+
+        # Assign the result back into the DataFrame
+        data.at[index, 'time_to_facility(hours)'] = travel_time
+
+        if travel_time != np.inf and travel_time > 0:
+            data.at[index, 'mW_per_minute'] = row['highest_mW'] / (travel_time * 60)
+        else:
+            data.at[index, 'mW_per_minute'] = None
 
     end_time = time.perf_counter()
     elapsed_time = end_time - start_time
     demsg(f'Elapsed time for data calculations: {elapsed_time}')
+
+    return data
+
+def get_state_from_coordinate(lat, lon):
+    """
+    Retrieve a state from the given coordinate based on shape data.
+    :param lat:
+    :param lon:
+    :return:
+    """
+    states_gdf = gpd.read_file(state_shapefile_path)
+    point = Point(lon, lat)  # Longitude, Latitude
+    for index, row in states_gdf.iterrows():
+        if row.geometry.contains(point):
+            return row["STUSPS"]
+    return None
+
+
+# TEST FUNCTIONS
+
+
+@webviews.route("/testing_shapefile", methods=["GET", "POST"])
+def testing_shapefile():
+    states_gdf = gpd.read_file(state_shapefile_path)
+    print(states_gdf.columns)
+    print(states_gdf.head())
+    print(get_state_from_coordinate(35.621744, -80.568123))
+
+    return redirect(url_for("webviews.web_home"))

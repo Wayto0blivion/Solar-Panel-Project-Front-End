@@ -8,33 +8,3 @@ Press CTRL+C to quit
  * Restarting with stat
  * Debugger is active!
  * Debugger PIN: 105-448-901
- * Detected change in "F:\\Python Projects\\Steve's Solar Panel Project\\webviews.py", reloading
- * Restarting with stat
- * Debugger is active!
- * Debugger PIN: 105-448-901
- * Detected change in "F:\\Python Projects\\Steve's Solar Panel Project\\webviews.py", reloading
- * Restarting with stat
- * Debugger is active!
- * Debugger PIN: 105-448-901
-192.168.3.83 - - [23/Oct/2024 09:25:38] "GET / HTTP/1.1" 200 -
-192.168.3.83 - - [23/Oct/2024 09:25:38] "GET /static/styles.css HTTP/1.1" 304 -
-192.168.3.83 - - [23/Oct/2024 09:25:39] "GET /favicon.ico HTTP/1.1" 404 -
-192.168.3.83 - - [23/Oct/2024 09:25:40] "GET /files HTTP/1.1" 200 -
-192.168.3.83 - - [23/Oct/2024 09:25:40] "GET /static/styles.css HTTP/1.1" 304 -
-192.168.2.122 - - [23/Oct/2024 09:26:32] "GET / HTTP/1.1" 200 -
-192.168.2.122 - - [23/Oct/2024 09:26:33] "GET /static/styles.css HTTP/1.1" 200 -
-192.168.2.122 - - [23/Oct/2024 09:26:33] "GET /favicon.ico HTTP/1.1" 404 -
-192.168.2.122 - - [23/Oct/2024 09:28:07] "GET /state-search HTTP/1.1" 200 -
-192.168.2.122 - - [23/Oct/2024 09:28:07] "GET /static/styles.css HTTP/1.1" 304 -
-192.168.2.122 - - [23/Oct/2024 09:28:10] "GET /state-search HTTP/1.1" 200 -
-192.168.2.122 - - [23/Oct/2024 09:28:10] "GET /static/styles.css HTTP/1.1" 304 -
-192.168.2.122 - - [23/Oct/2024 09:28:14] "GET /files HTTP/1.1" 200 -
-192.168.2.122 - - [23/Oct/2024 09:28:14] "GET /static/styles.css HTTP/1.1" 304 -
-192.168.2.122 - - [23/Oct/2024 09:28:18] "GET /user_data/all_us_facilities_2024-09-24.html HTTP/1.1" 200 -
-192.168.3.83 - - [23/Oct/2024 09:33:55] "GET /user_data/all_us_facilities_2024-09-24.html HTTP/1.1" 200 -
-192.168.3.83 - - [23/Oct/2024 09:35:45] "GET /user_data/all_us_facilities_2024-09-24.html HTTP/1.1" 304 -
-192.168.3.83 - - [23/Oct/2024 09:36:28] "GET /user_data/all_us_facilities_2024-09-24.html HTTP/1.1" 304 -
-192.168.3.83 - - [23/Oct/2024 09:38:51] "GET / HTTP/1.1" 200 -
-192.168.3.83 - - [23/Oct/2024 09:38:51] "GET /static/styles.css HTTP/1.1" 304 -
-192.168.3.83 - - [23/Oct/2024 09:39:00] "GET / HTTP/1.1" 200 -
-192.168.3.83 - - [23/Oct/2024 09:39:00] "GET /static/styles.css HTTP/1.1" 304 -
