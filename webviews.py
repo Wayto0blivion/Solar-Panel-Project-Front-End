@@ -33,6 +33,8 @@ us_center_coords = [39.809860, -98.555183]
 max_travel_time = 15.0  # Float in hours
 
 
+# TODO: Add coordinates to map point.
+
 @webviews.route('/')
 def web_home():
     """
